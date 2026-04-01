@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="https://public-frontend-cos.metadl.com/mgx/img/favicon_atoms.ico" type="image/x-icon" />
+  <title>GIFT One Tower — Digital Twin</title>
+  <link rel="stylesheet" href="./style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <!-- MapLibre GL JS -->
+  <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+  <!-- Three.js -->
+  <script src="./three.min.js"></script>
+  <script src="./OrbitControls.js"></script>
+</head>
+<body>
+  <!-- Header -->
+  <header id="app-header">
+    <div class="header-left">
+      <div class="header-icon">🏙️</div>
+      <div>
+        <h1>GIFT One Tower</h1>
+        <p class="header-subtitle">Digital Twin • GIFT City, Gandhinagar • 23.1647°N, 72.6801°E</p>
+      </div>
+    </div>
+    <div class="header-right">
+      <span class="tower-stats">29 Floors • 122m • LEED Platinum</span>
+      <span class="status-badge" id="status-badge">● Live</span>
+    </div>
+  </header>
+
+  <!-- Day/Night Cycle Controls (separate bar for visibility) -->
+  <div id="daynight-controls">
+    <span class="dn-label">☀️ Time of Day</span>
+    <button class="dn-btn" data-mode="dawn" title="Dawn (6 AM)">🌅 Dawn</button>
+    <button class="dn-btn active" data-mode="day" title="Day (12 PM)">☀️ Day</button>
+    <button class="dn-btn" data-mode="dusk" title="Dusk (6 PM)">🌇 Dusk</button>
+    <button class="dn-btn" data-mode="night" title="Night (11 PM)">🌙 Night</button>
+    <button class="dn-btn" data-mode="auto" title="Auto (Real GIFT City Time IST)">🔄 Auto</button>
+    <span class="dn-time" id="dn-time-label">12:00 PM</span>
+  </div>
+
+  <!-- View Mode Controls -->
+  <div id="view-controls">
+    <span class="controls-label">View</span>
+    <button class="view-btn active" data-view="orbit" title="3D Orbit View">
+      <span class="view-icon">🔄</span><span class="view-label">Orbit</span>
+    </button>
+    <button class="view-btn" data-view="realmap" title="Real Map with Building">
+      <span class="view-icon">🌍</span><span class="view-label">Real Map</span>
+    </button>
+    <button class="view-btn" data-view="map" title="Top-Down Map View">
+      <span class="view-icon">🗺️</span><span class="view-label">Top Down</span>
+    </button>
+    <button class="view-btn" data-view="birdseye" title="Bird's Eye View">
+      <span class="view-icon">🦅</span><span class="view-label">Bird Eye</span>
+    </button>
+    <button class="view-btn" data-view="interior" title="Interior View (click room first)">
+      <span class="view-icon">🚪</span><span class="view-label">Interior</span>
+    </button>
+  </div>
+
+  <!-- Floor Group Controls -->
+  <div id="floor-controls">
+    <span class="controls-label">Floors</span>
+    <button class="floor-btn active" data-floor="all">All</button>
+    <button class="floor-btn" data-floor="0">G</button>
+    <button class="floor-btn" data-floor="1-5">1-5</button>
+    <button class="floor-btn" data-floor="6-10">6-10</button>
+    <button class="floor-btn" data-floor="11-15">11-15</button>
+    <button class="floor-btn" data-floor="16-20">16-20</button>
+    <button class="floor-btn" data-floor="21-25">21-25</button>
+    <button class="floor-btn" data-floor="26-28">26-28</button>
+  </div>
+
+  <!-- 3D Canvas -->
+  <div id="canvas-container">
+    <canvas id="three-canvas"></canvas>
+  </div>
+
+  <!-- MapLibre Map Container -->
+  <div id="map-container" class="hidden">
+    <div id="maplibre-map"></div>
+    <!-- Map Legend -->
+    <div id="map-legend">
+      <div class="legend-title">GIFT City Buildings</div>
+      <div class="legend-item"><span class="legend-color" style="background:#4a9eff"></span>GIFT One Tower (122m)</div>
+      <div class="legend-item"><span class="legend-color" style="background:#00d4ff"></span>GIFT Two Tower (128m)</div>
+      <div class="legend-item"><span class="legend-color" style="background:#c084fc"></span>SEZ Office Complex</div>
+      <div class="legend-item"><span class="legend-color" style="background:#50c878"></span>Club House</div>
+      <div class="legend-item"><span class="legend-color" style="background:#ffd700"></span>Metro Station</div>
+    </div>
+    <!-- Map Info Card -->
+    <div id="map-info-card" class="hidden">
+      <div class="map-info-header">
+        <span id="map-info-title">Building Info</span>
+        <button id="map-info-close">&times;</button>
+      </div>
+      <div id="map-info-body"></div>
+    </div>
+  </div>
+
+  <!-- Telemetry Dashboard (right side) -->
+  <div id="telemetry-dashboard">
+    <div class="dash-header">
+      <h3>📊 Live Telemetry</h3>
+      <span class="dash-time" id="dash-time">--:--:--</span>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <div class="dash-card-icon">⚡</div>
+        <div class="dash-card-body">
+          <span class="dash-card-label">Total Power</span>
+          <span class="dash-card-value" id="dash-power">-- kW</span>
+          <span class="dash-card-sub" id="dash-power-rating">--</span>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-icon">🌡️</div>
+        <div class="dash-card-body">
+          <span class="dash-card-label">Avg Temp</span>
+          <span class="dash-card-value" id="dash-temp">--°C</span>
+          <span class="dash-card-sub" id="dash-hvac">--</span>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-icon">👥</div>
+        <div class="dash-card-body">
+          <span class="dash-card-label">Occupancy</span>
+          <span class="dash-card-value" id="dash-occupancy">-- ppl</span>
+          <span class="dash-card-sub" id="dash-occ-status">--</span>
+        </div>
+      </div>
+      <div class="dash-card">
+        <div class="dash-card-icon">💨</div>
+        <div class="dash-card-body">
+          <span class="dash-card-label">Air Quality</span>
+          <span class="dash-card-value" id="dash-co2">-- ppm</span>
+          <span class="dash-card-sub" id="dash-air-status">--</span>
+        </div>
+      </div>
+    </div>
+    <!-- Mini floor heatmap -->
+    <div class="dash-section">
+      <span class="dash-section-label">Floor Energy Heatmap</span>
+      <div class="floor-heatmap" id="floor-heatmap"></div>
+    </div>
+    <div class="dash-section">
+      <span class="dash-section-label">Building Info</span>
+      <div class="dash-info-row"><span>OSM Way ID</span><span>386478178</span></div>
+      <div class="dash-info-row"><span>Coordinates</span><span>23.1647°N, 72.6801°E</span></div>
+      <div class="dash-info-row"><span>Height</span><span>122 meters</span></div>
+      <div class="dash-info-row"><span>District Cooling</span><span class="text-green">Active</span></div>
+      <div class="dash-info-row"><span>Elevators</span><span>6/6 Operational</span></div>
+    </div>
+  </div>
+
+  <!-- Hover Tooltip -->
+  <div id="hover-tooltip" class="hidden"></div>
+
+  <!-- View Indicator -->
+  <div id="view-indicator" class="hidden">
+    <span id="view-indicator-text"></span>
+    <button id="view-indicator-exit">✕ Exit</button>
+  </div>
+
+  <!-- Room Info Panel -->
+  <div id="info-panel" class="hidden">
+    <div class="panel-header">
+      <h2 id="panel-title">Room Info</h2>
+      <button id="panel-close">&times;</button>
+    </div>
+    <div class="panel-body">
+      <div class="info-row"><span class="info-label">Tenant</span><span class="info-value" id="info-tenant">—</span></div>
+      <div class="info-row"><span class="info-label">Room ID</span><span class="info-value" id="info-room-id">—</span></div>
+      <div class="info-row"><span class="info-label">Floor</span><span class="info-value" id="info-floor">—</span></div>
+      <div class="info-row"><span class="info-label">Department</span><span class="info-value" id="info-department">—</span></div>
+      <div class="info-row"><span class="info-label">Description</span><span class="info-value" id="info-description">—</span></div>
+      <div class="info-row"><span class="info-label">Hours</span><span class="info-value" id="info-hours">—</span></div>
+      <div class="info-row"><span class="info-label">Capacity</span><span class="info-value" id="info-capacity">—</span></div>
+      <div class="info-row"><span class="info-label">Area</span><span class="info-value" id="info-area">—</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value" id="info-status">—</span></div>
+      <!-- Floor telemetry in panel -->
+      <div class="panel-telemetry" id="panel-telemetry">
+        <div class="info-row telem"><span class="info-label">🌡️ Temp</span><span class="info-value" id="info-temp">—</span></div>
+        <div class="info-row telem"><span class="info-label">⚡ Power</span><span class="info-value" id="info-power">—</span></div>
+        <div class="info-row telem"><span class="info-label">👥 Occupancy</span><span class="info-value" id="info-occ">—</span></div>
+        <div class="info-row telem"><span class="info-label">💨 CO₂</span><span class="info-value" id="info-co2">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay">
+    <div class="loader-content">
+      <div class="spinner"></div>
+      <p>Loading GIFT One Tower Digital Twin...</p>
+      <p class="loader-sub">29 Floors • 122m • GIFT City, Gandhinagar</p>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div id="instructions">
+    <span>🖱️ Click: Select room</span>
+    <span>🔄 Drag: Rotate</span>
+    <span>🔍 Scroll: Zoom</span>
+    <span>👆 Double-click: Interior</span>
+    <span>🌍 Real Map: Toggle</span>
+    <span>⌨️ 1-5: Views</span>
+  </div>
+
+  <script src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "building-digital-twin",
+  "version": "1.0.0",
+  "description": "A web-based Digital Twin prototype using Three.js and Express",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^4.22.1"
+  },
+  "keywords": [
+    "digital-twin",
+    "threejs",
+    "3d",
+    "building"
+  ],
+  "license": "MIT"
+}
